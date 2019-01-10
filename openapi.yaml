@@ -39,6 +39,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResult'
+      
+  /entries:
+    post:
+      tags:
+        - Entries
+      summary: Create a new entry
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entry'
+      responses:
+        '201':
+          description: Created a new entry
+          content:
+            application/json:
+              schema:
+                description: The ID of the created entry
+                type: string
   '/entries/{id}':
     get:
       summary: Get an entry
@@ -57,6 +76,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Entry'
+    put:
+      summary: Update an entry
+      tags:
+        - Entries
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true #ToDo: is this correct?
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entry'
+      responses:
+        '200':
+          description: Sucessfully updated the entry
+
   '/ratings/{id}':
     get:
       summary: Get a specific rating
@@ -75,7 +114,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Rating'
-  /categories/:
+  /categories:
     get:
       summary: Get available categories
       tags:
@@ -354,6 +393,21 @@ components:
           type: string
         license:
           type: string
+      example:
+        title: Title
+        description: Some description
+        lat: 0.0
+        lng: 0.0
+        street: "Street Name 5"
+        zip: "23423"
+        city: CityName
+        country: Germany
+        categories:
+          - 77b3c33a92554bcf8e8c2c86cedd6f6f
+        tags:
+          - bio
+        license: CC0-1.0
+      
     Category:
       properties:
         id:
