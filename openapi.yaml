@@ -39,7 +39,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResult'
-      
   /entries:
     post:
       tags:
@@ -51,7 +50,7 @@ paths:
             schema:
               $ref: '#/components/schemas/Entry'
       responses:
-        '201':
+        '200':
           description: Created a new entry
           content:
             application/json:
@@ -146,6 +145,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Category'
+  /tags:
+    get:
+      summary: Get available tags
+      tags:
+        - Tags
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /events:
     get:
       tags:
