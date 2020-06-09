@@ -88,7 +88,7 @@ fn in_close_proximity(e1: &Place, e2: &Place, max_dist: Distance) -> bool {
     in_close_proximity_pos(&e1.location.pos, &e2.location.pos, max_dist)
 }
 
-fn similar_title(
+fn similar_title(  //is_similar_title? andre fn auch
     title1: &String,
     title2: &String,
     max_percent_different: f32,
@@ -100,20 +100,6 @@ fn similar_title(
     levenshtein_distance_small(&title1, &title2, max_dist)
         || words_equal_except_k_words(&title1, &title2, max_words_different)
 }
-
-////is now replaced by similar_title(str, str,...)
-// fn similar_title(
-//     e1: &Place,
-//     e2: &Place,
-//     max_percent_different: f32,
-//     max_words_different: u32,
-// ) -> bool {
-//     let max_dist =
-//         ((min(e1.title.len(), e2.title.len()) as f32 * max_percent_different) + 1.0) as usize; // +1 is to get the ceil
-
-//     levenshtein_distance_small(&e1.title, &e2.title, max_dist)
-//         || words_equal_except_k_words(&e1.title, &e2.title, max_words_different)
-// }
 
 // returns true if all but k words are equal in str1 and str2
 // (and one of them has more than one word)
@@ -320,9 +306,6 @@ mod tests {
 
     #[test]
     fn test_is_duplicate_new_place() {
-        // "Ein Eintrag Blablabla".to_string(),
-        // "Hallo! Ein Eintrag".to_string(),
-        // MapPoint::from_lat_lng_deg(47.23153745093964, 5.003816366195679),
         let x = &usecases::NewPlace {
             title       : "Ein Eintrag Blablabla".into(),
             description : "Hallo! Ein Eintrag".into(),
