@@ -34,31 +34,11 @@ pub fn find_duplicate_place(
     let mut duplicates = Vec::new();
 
     for(p, _) in &possible_duplicate_places[..] {
-
-        // let mut duplicate_type: Option<DuplicateType> = None;
-
-        // let new_pos = MapPoint::from_lat_lng_deg(new_place.lat, new_place.lng);
-        
-        // if similar_title(&new_place.title, &p.title, 0.3, 0) 
-        // && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
-        //     duplicate_type = Some(DuplicateType::SimilarChars);
-        // } else if similar_title(&new_place.title, &p.title, 0.0, 2) 
-        // && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
-        //     duplicate_type= Some(DuplicateType::SimilarWords);
-        // } else {
-        //     duplicate_type = None
-        // }
-
         if let Some(t) = is_duplicate_new_place(&new_place, &p) {
             duplicates.push((p.id.clone(), t));
         }
-
-        // if let Some(t) = duplicate_type {
-        // }
-    };
-
+    }
     duplicates
-    // todo!()
 }
 
 const DUPLICATE_MAX_DISTANCE: Distance = Distance::from_meters(100.0);
@@ -79,17 +59,6 @@ fn is_duplicate_new_place(new_place: &usecases::NewPlace, p: &Place) -> Option<D
     else {
         None
     }
-
-    // let new_pos = MapPoint::from_lat_lng_deg(new_place.lat, new_place.lng);        
-    // if similar_title(&new_place.title, &p.title, 0.3, 0) 
-    // && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
-    //     Some(DuplicateType::SimilarChars)
-    // } else if similar_title(&new_place.title, &p.title, 0.0, 2) 
-    // && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
-    //     Some(DuplicateType::SimilarWords)
-    // } else {
-    //     None
-    // }
 } 
 
 // returns a DuplicateType if the two places have a similar title, returns None otherwise
@@ -105,6 +74,7 @@ fn is_duplicate(e1: &Place, e2: &Place) -> Option<DuplicateType> {
     }
 }
 
+// in_close_proximity function could be replaced by this function
 fn in_close_proximity_pos(p1 : &MapPoint, p2 : &MapPoint, max_dist: Distance) -> bool {
     if let Some(dist) = MapPoint::distance(*p1, *p2) {
         return dist <= max_dist;
@@ -131,6 +101,7 @@ fn similar_title(
         || words_equal_except_k_words(&title1, &title2, max_words_different)
 }
 
+////is now replaced by similar_title(str, str,...)
 // fn similar_title(
 //     e1: &Place,
 //     e2: &Place,
@@ -270,6 +241,15 @@ mod tests {
     }
 
     #[test]
+    fn test_in_close_proximity_pos() {
+        let pos1 = MapPoint::from_lat_lng_deg(48.23153745093964, 8.003816366195679);
+        let pos2 = MapPoint::from_lat_lng_deg(48.23167056421013, 8.003558874130248);
+
+        assert!(in_close_proximity_pos(&pos1, &pos2, Distance::from_meters(30.0)));
+        assert!(!in_close_proximity_pos(&pos1, &pos2, Distance::from_meters(10.0)));
+    }
+
+    #[test]
     fn test_similar_title() {
         let e1 = new_place(
             "0123456789".to_string(),
@@ -336,6 +316,71 @@ mod tests {
         assert_eq!(None, is_duplicate(&e2, &e4));
         // places not located close together
         assert_eq!(None, is_duplicate(&e4, &e5));
+    }
+
+    #[test]
+    fn test_is_duplicate_new_place() {
+        // "Ein Eintrag Blablabla".to_string(),
+        // "Hallo! Ein Eintrag".to_string(),
+        // MapPoint::from_lat_lng_deg(47.23153745093964, 5.003816366195679),
+        let x = &usecases::NewPlace {
+            title       : "Ein Eintrag Blablabla".into(),
+            description : "Hallo! Ein Eintrag".into(),
+            lat         : 47.23153745093964,
+            lng         : 5.003816366195679,
+            street      : None,
+            zip         : None,
+            city        : None,
+            country     : None,
+            state       : None,
+            email       : None,
+            telephone   : None,
+            homepage    : None,
+            opening_hours: None,
+            categories  : vec![],
+            tags        : vec![],
+            license     : "CC0-1.0".into(),
+            image_url     : None,
+            image_link_url: None,
+        };
+
+        let e2 = new_place(
+            "Eintrag".to_string(),
+            "Hallo! Ein Eintrag".to_string(),
+            MapPoint::from_lat_lng_deg(47.23153745093970, 5.003816366195679),
+        );
+        let e3 = new_place(
+            "Enn Eintrxg Blablalx".to_string(),
+            "Hallo! Ein Eintrag".to_string(),
+            MapPoint::from_lat_lng_deg(47.23153745093955, 5.003816366195679),
+        );
+        let e4 = new_place(
+            "En Eintrg Blablala".to_string(),
+            "Hallo! Ein Eintrag".to_string(),
+            MapPoint::from_lat_lng_deg(47.23153745093955, 5.003816366195679),
+        );
+        let e5 = new_place(
+            "Ein Eintrag Blabla".to_string(),
+            "Hallo! Ein Eintrag".to_string(),
+            MapPoint::from_lat_lng_deg(40.23153745093960, 5.003816366195670),
+        );
+        let e6 = new_place(
+            "Ein Eintrag Blablabla".to_string(),
+            "Hallo! Ein Eintrag".to_string(),
+            MapPoint::from_lat_lng_deg(47.23153745093964, 5.003816366195679),
+        );
+
+        // titles have a word that is equal
+        assert_eq!(Some(DuplicateType::SimilarWords), is_duplicate_new_place(&x, &e2));
+        // titles similar: small hamming distance
+        assert_eq!(Some(DuplicateType::SimilarChars), is_duplicate_new_place(&x, &e3));
+        // titles similar: small levenshtein distance
+        assert_eq!(Some(DuplicateType::SimilarChars), is_duplicate_new_place(&x, &e4));
+        // exact_same
+        assert_eq!(Some(DuplicateType::SimilarChars), is_duplicate_new_place(&x, &e6));
+        // too far away
+        assert_eq!(None, is_duplicate_new_place(&x, &e5));
+
     }
 
     #[test]
