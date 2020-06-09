@@ -41,7 +41,7 @@ maud = { version = "*", optional = true, features = ["rocket"] }
 ofdb-boundary = "*"
 ofdb-entities = "*"
 ofdb-gateways = "*"
-openssl = { version = "*", features = ["vendored"] }
+#openssl = { version = "*", features = ["vendored"] }
 owning_ref = "*"
 passwords = "*"
 pwhash = "*"

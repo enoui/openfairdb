@@ -31,41 +31,118 @@ pub fn find_duplicate_place(
     new_place: &usecases::NewPlace,
     possible_duplicate_places: &[(Place, ReviewStatus)],
 ) -> Vec<(Id, DuplicateType)> {
-    todo!()
+    let mut duplicates = Vec::new();
+
+    for(p, _) in &possible_duplicate_places[..] {
+
+        // let mut duplicate_type: Option<DuplicateType> = None;
+
+        // let new_pos = MapPoint::from_lat_lng_deg(new_place.lat, new_place.lng);
+        
+        // if similar_title(&new_place.title, &p.title, 0.3, 0) 
+        // && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
+        //     duplicate_type = Some(DuplicateType::SimilarChars);
+        // } else if similar_title(&new_place.title, &p.title, 0.0, 2) 
+        // && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
+        //     duplicate_type= Some(DuplicateType::SimilarWords);
+        // } else {
+        //     duplicate_type = None
+        // }
+
+        if let Some(t) = is_duplicate_new_place(&new_place, &p) {
+            duplicates.push((p.id.clone(), t));
+        }
+
+        // if let Some(t) = duplicate_type {
+        // }
+    };
+
+    duplicates
+    // todo!()
 }
 
 const DUPLICATE_MAX_DISTANCE: Distance = Distance::from_meters(100.0);
 
+fn is_duplicate_new_place(new_place: &usecases::NewPlace, p: &Place) -> Option<DuplicateType> {
+
+    if let Some(new_pos) = MapPoint::try_from_lat_lng_deg(new_place.lat, new_place.lng) {
+        if similar_title(&new_place.title, &p.title, 0.3, 0) 
+        && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
+            Some(DuplicateType::SimilarChars)
+        } else if similar_title(&new_place.title, &p.title, 0.0, 2) 
+        && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
+            Some(DuplicateType::SimilarWords)
+        } else {
+            None
+        }
+    }
+    else {
+        None
+    }
+
+    // let new_pos = MapPoint::from_lat_lng_deg(new_place.lat, new_place.lng);        
+    // if similar_title(&new_place.title, &p.title, 0.3, 0) 
+    // && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
+    //     Some(DuplicateType::SimilarChars)
+    // } else if similar_title(&new_place.title, &p.title, 0.0, 2) 
+    // && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
+    //     Some(DuplicateType::SimilarWords)
+    // } else {
+    //     None
+    // }
+} 
+
 // returns a DuplicateType if the two places have a similar title, returns None otherwise
 fn is_duplicate(e1: &Place, e2: &Place) -> Option<DuplicateType> {
-    if similar_title(e1, e2, 0.3, 0) && in_close_proximity(e1, e2, DUPLICATE_MAX_DISTANCE) {
+    if similar_title(&e1.title, &e2.title, 0.3, 0) 
+    && in_close_proximity(e1, e2, DUPLICATE_MAX_DISTANCE) {
         Some(DuplicateType::SimilarChars)
-    } else if similar_title(e1, e2, 0.0, 2) && in_close_proximity(e1, e2, DUPLICATE_MAX_DISTANCE) {
+    } else if similar_title(&e1.title, &e2.title, 0.0, 2) 
+    && in_close_proximity(e1, e2, DUPLICATE_MAX_DISTANCE) {
         Some(DuplicateType::SimilarWords)
     } else {
         None
     }
 }
 
-fn in_close_proximity(e1: &Place, e2: &Place, max_dist: Distance) -> bool {
-    if let Some(dist) = MapPoint::distance(e1.location.pos, e2.location.pos) {
+fn in_close_proximity_pos(p1 : &MapPoint, p2 : &MapPoint, max_dist: Distance) -> bool {
+    if let Some(dist) = MapPoint::distance(*p1, *p2) {
         return dist <= max_dist;
     }
     false
 }
 
+// es: this function is now kind of redundant i guess. But I don't know if it is maybe 
+// needed from outside (same with is_similar_title)
+fn in_close_proximity(e1: &Place, e2: &Place, max_dist: Distance) -> bool {
+    in_close_proximity_pos(&e1.location.pos, &e2.location.pos, max_dist)
+}
+
 fn similar_title(
-    e1: &Place,
-    e2: &Place,
+    title1: &String,
+    title2: &String,
     max_percent_different: f32,
     max_words_different: u32,
 ) -> bool {
     let max_dist =
-        ((min(e1.title.len(), e2.title.len()) as f32 * max_percent_different) + 1.0) as usize; // +1 is to get the ceil
+        ((min(title1.len(), title2.len()) as f32 * max_percent_different) + 1.0) as usize; // +1 is to get the ceil
 
-    levenshtein_distance_small(&e1.title, &e2.title, max_dist)
-        || words_equal_except_k_words(&e1.title, &e2.title, max_words_different)
+    levenshtein_distance_small(&title1, &title2, max_dist)
+        || words_equal_except_k_words(&title1, &title2, max_words_different)
 }
+
+// fn similar_title(
+//     e1: &Place,
+//     e2: &Place,
+//     max_percent_different: f32,
+//     max_words_different: u32,
+// ) -> bool {
+//     let max_dist =
+//         ((min(e1.title.len(), e2.title.len()) as f32 * max_percent_different) + 1.0) as usize; // +1 is to get the ceil
+
+//     levenshtein_distance_small(&e1.title, &e2.title, max_dist)
+//         || words_equal_except_k_words(&e1.title, &e2.title, max_words_different)
+// }
 
 // returns true if all but k words are equal in str1 and str2
 // (and one of them has more than one word)
@@ -215,10 +292,10 @@ mod tests {
             MapPoint::from_lat_lng_deg(48.23153745093964, 6.003816366195679),
         );
 
-        assert_eq!(true, similar_title(&e1, &e2, 0.2, 0)); // only 2 characters changed
-        assert_eq!(false, similar_title(&e1, &e2, 0.1, 0)); // more than one character changed
-        assert_eq!(true, similar_title(&e3, &e4, 0.0, 2)); // only 2 words changed
-        assert_eq!(false, similar_title(&e3, &e4, 0.0, 1)); // more than 1 word changed
+        assert_eq!(true, similar_title(&e1.title, &e2.title, 0.2, 0)); // only 2 characters changed
+        assert_eq!(false, similar_title(&e1.title, &e2.title, 0.1, 0)); // more than one character changed
+        assert_eq!(true, similar_title(&e3.title, &e4.title, 0.0, 2)); // only 2 words changed
+        assert_eq!(false, similar_title(&e3.title, &e4.title, 0.0, 1)); // more than 1 word changed
     }
 
     #[test]
