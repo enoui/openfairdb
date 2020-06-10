@@ -22,7 +22,8 @@ pub fn post_duplicates(
         let db = db.shared()?;
         db.all_places()?
     };
-    let results = usecases::find_duplicate_place(&new_place, &possible_duplicate_entries);
+    let results = usecases::find_duplicate_of_unregistered_place(&new_place, 
+        &possible_duplicate_entries);
     Ok(Json(
         results
             .into_iter()

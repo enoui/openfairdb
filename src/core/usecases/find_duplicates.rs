@@ -27,30 +27,46 @@ pub fn find_duplicates(
     duplicates
 }
 
-pub fn find_duplicate_place(
-    new_place: &usecases::NewPlace,
+// returns a DuplicateType if the two places have a similar title and location, returns None otherwise
+fn is_duplicate(e1: &Place, e2: &Place) -> Option<DuplicateType> {
+    if is_similar_title(&e1.title, &e2.title, 0.3, 0) 
+    && is_in_close_proximity(&e1.location.pos, &e2.location.pos, DUPLICATES_MAX_DISTANCE) {
+        Some(DuplicateType::SimilarChars)
+    } else if is_similar_title(&e1.title, &e2.title, 0.0, 2) 
+    && is_in_close_proximity(&e1.location.pos, &e2.location.pos, DUPLICATES_MAX_DISTANCE) {
+        Some(DuplicateType::SimilarWords)
+    } else {
+        None
+    }
+}
+
+// return vector of places like (entryID, reason) 
+// where the new and yet unregistered place are similar places
+pub fn find_duplicate_of_unregistered_place(
+    unregistered_place: &usecases::NewPlace,
     possible_duplicate_places: &[(Place, ReviewStatus)],
 ) -> Vec<(Id, DuplicateType)> {
     let mut duplicates = Vec::new();
 
     for(p, _) in &possible_duplicate_places[..] {
-        if let Some(t) = is_duplicate_new_place(&new_place, &p) {
+        if let Some(t) = is_duplicate_unregistered_place(&unregistered_place, &p) {
             duplicates.push((p.id.clone(), t));
         }
     }
     duplicates
 }
 
-const DUPLICATE_MAX_DISTANCE: Distance = Distance::from_meters(100.0);
+const DUPLICATES_MAX_DISTANCE: Distance = Distance::from_meters(100.0);
 
-fn is_duplicate_new_place(new_place: &usecases::NewPlace, p: &Place) -> Option<DuplicateType> {
+//returns a DuplicateType if the two places have a similar title and location, otherwise returns None
+fn is_duplicate_unregistered_place(new_place: &usecases::NewPlace, p: &Place) -> Option<DuplicateType> {
 
     if let Some(new_pos) = MapPoint::try_from_lat_lng_deg(new_place.lat, new_place.lng) {
-        if similar_title(&new_place.title, &p.title, 0.3, 0) 
-        && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
+        if is_similar_title(&new_place.title, &p.title, 0.3, 0) 
+        && is_in_close_proximity(&new_pos, &p.location.pos, DUPLICATES_MAX_DISTANCE) {
             Some(DuplicateType::SimilarChars)
-        } else if similar_title(&new_place.title, &p.title, 0.0, 2) 
-        && in_close_proximity_pos(&new_pos, &p.location.pos, DUPLICATE_MAX_DISTANCE) {
+        } else if is_similar_title(&new_place.title, &p.title, 0.0, 2) 
+        && is_in_close_proximity(&new_pos, &p.location.pos, DUPLICATES_MAX_DISTANCE) {
             Some(DuplicateType::SimilarWords)
         } else {
             None
@@ -61,34 +77,16 @@ fn is_duplicate_new_place(new_place: &usecases::NewPlace, p: &Place) -> Option<D
     }
 } 
 
-// returns a DuplicateType if the two places have a similar title, returns None otherwise
-fn is_duplicate(e1: &Place, e2: &Place) -> Option<DuplicateType> {
-    if similar_title(&e1.title, &e2.title, 0.3, 0) 
-    && in_close_proximity(e1, e2, DUPLICATE_MAX_DISTANCE) {
-        Some(DuplicateType::SimilarChars)
-    } else if similar_title(&e1.title, &e2.title, 0.0, 2) 
-    && in_close_proximity(e1, e2, DUPLICATE_MAX_DISTANCE) {
-        Some(DuplicateType::SimilarWords)
-    } else {
-        None
-    }
-}
-
-// in_close_proximity function could be replaced by this function
-fn in_close_proximity_pos(p1 : &MapPoint, p2 : &MapPoint, max_dist: Distance) -> bool {
+// returns wether the two MapPoints are in close proximity
+fn is_in_close_proximity(p1 : &MapPoint, p2 : &MapPoint, max_dist: Distance) -> bool {
     if let Some(dist) = MapPoint::distance(*p1, *p2) {
         return dist <= max_dist;
     }
     false
 }
 
-// es: this function is now kind of redundant i guess. But I don't know if it is maybe 
-// needed from outside (same with is_similar_title)
-fn in_close_proximity(e1: &Place, e2: &Place, max_dist: Distance) -> bool {
-    in_close_proximity_pos(&e1.location.pos, &e2.location.pos, max_dist)
-}
-
-fn similar_title(  //is_similar_title? andre fn auch
+// returns whether the two titles are similar
+fn is_similar_title( 
     title1: &String,
     title2: &String,
     max_percent_different: f32,
@@ -222,8 +220,8 @@ mod tests {
             MapPoint::from_lat_lng_deg(48.23167056421013, 8.003558874130248),
         );
 
-        assert!(in_close_proximity(&e1, &e2, Distance::from_meters(30.0)));
-        assert!(!in_close_proximity(&e1, &e2, Distance::from_meters(10.0)));
+        assert!(is_in_close_proximity(&e1.location.pos, &e2.location.pos, Distance::from_meters(30.0)));
+        assert!(!is_in_close_proximity(&e1.location.pos, &e2.location.pos, Distance::from_meters(10.0)));
     }
 
     #[test]
@@ -231,8 +229,8 @@ mod tests {
         let pos1 = MapPoint::from_lat_lng_deg(48.23153745093964, 8.003816366195679);
         let pos2 = MapPoint::from_lat_lng_deg(48.23167056421013, 8.003558874130248);
 
-        assert!(in_close_proximity_pos(&pos1, &pos2, Distance::from_meters(30.0)));
-        assert!(!in_close_proximity_pos(&pos1, &pos2, Distance::from_meters(10.0)));
+        assert!(is_in_close_proximity(&pos1, &pos2, Distance::from_meters(30.0)));
+        assert!(!is_in_close_proximity(&pos1, &pos2, Distance::from_meters(10.0)));
     }
 
     #[test]
@@ -258,10 +256,10 @@ mod tests {
             MapPoint::from_lat_lng_deg(48.23153745093964, 6.003816366195679),
         );
 
-        assert_eq!(true, similar_title(&e1.title, &e2.title, 0.2, 0)); // only 2 characters changed
-        assert_eq!(false, similar_title(&e1.title, &e2.title, 0.1, 0)); // more than one character changed
-        assert_eq!(true, similar_title(&e3.title, &e4.title, 0.0, 2)); // only 2 words changed
-        assert_eq!(false, similar_title(&e3.title, &e4.title, 0.0, 1)); // more than 1 word changed
+        assert_eq!(true, is_similar_title(&e1.title, &e2.title, 0.2, 0)); // only 2 characters changed
+        assert_eq!(false, is_similar_title(&e1.title, &e2.title, 0.1, 0)); // more than one character changed
+        assert_eq!(true, is_similar_title(&e3.title, &e4.title, 0.0, 2)); // only 2 words changed
+        assert_eq!(false, is_similar_title(&e3.title, &e4.title, 0.0, 1)); // more than 1 word changed
     }
 
     #[test]
@@ -354,15 +352,15 @@ mod tests {
         );
 
         // titles have a word that is equal
-        assert_eq!(Some(DuplicateType::SimilarWords), is_duplicate_new_place(&x, &e2));
+        assert_eq!(Some(DuplicateType::SimilarWords), is_duplicate_unregistered_place(&x, &e2));
         // titles similar: small hamming distance
-        assert_eq!(Some(DuplicateType::SimilarChars), is_duplicate_new_place(&x, &e3));
+        assert_eq!(Some(DuplicateType::SimilarChars), is_duplicate_unregistered_place(&x, &e3));
         // titles similar: small levenshtein distance
-        assert_eq!(Some(DuplicateType::SimilarChars), is_duplicate_new_place(&x, &e4));
+        assert_eq!(Some(DuplicateType::SimilarChars), is_duplicate_unregistered_place(&x, &e4));
         // exact_same
-        assert_eq!(Some(DuplicateType::SimilarChars), is_duplicate_new_place(&x, &e6));
+        assert!(None != is_duplicate_unregistered_place(&x, &e6));
         // too far away
-        assert_eq!(None, is_duplicate_new_place(&x, &e5));
+        assert_eq!(None, is_duplicate_unregistered_place(&x, &e5));
 
     }
 
